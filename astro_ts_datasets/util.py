@@ -11,6 +11,7 @@ class AstroTsDatasetInfo(tfds.core.DatasetInfo):
     static_dtype = tf.float32
     timeseries_dtype = tf.float32
     object_id_dtype = tf.uint32
+    redshift_dtype = tf.float32
 
     @tfds.core.api_utils.disallow_positional_args
     def __init__(self, builder, targets, default_target,
@@ -48,19 +49,28 @@ class AstroTsDatasetInfo(tfds.core.DatasetInfo):
             features_dict['static'] = Tensor(
                 shape=(len(static_names),),
                 dtype=self.static_dtype)
+            features_dict['static_errors'] = Tensor(
+                shape=(len(static_names),),
+                dtype=self.static_dtype)
         if self.has_timeseries:
-            metadata['values_names'] = timeseries_names
+            metadata['value_names'] = timeseries_names
             timeseries_is_categorical.extend(
                 ['=' in name for name in timeseries_names])
             features_dict['values'] = Tensor(
                 shape=(None, len(timeseries_names),),
                 dtype=self.timeseries_dtype)
+            features_dict['value_errors'] = Tensor(
+                shape=(None, len(timeseries_names),),
+                dtype=self.timeseries_dtype)
 
         metadata['static_categorical_indicator'] = static_is_categorical
-        metadata['values_categorical_indicator'] = timeseries_is_categorical
+        metadata['value_categorical_indicator'] = timeseries_is_categorical
 
         features_dict['targets'] = targets
-        features_dict['metadata'] = {'object_id': self.object_id_dtype}
+        features_dict['metadata'] = {
+            'object_id': self.object_id_dtype,
+            'redshift': self.redshift_dtype
+        }
         features_dict = FeaturesDict(features_dict)
         # TODO: If we are supposed to return raw values, we cannot make
         # a supervised dataset
@@ -94,28 +104,33 @@ class AstroTsDatasetBuilder(tfds.core.GeneratorBasedBuilder):
             return dataset
 
         has_static = self.info.has_static
-        collect_ts = []
-        if self.has_timeseries:
-            collect_ts.append('values')
+        has_timeseries = self.info.has_timeseries
 
         def preprocess_output(instance):
             if has_static:
                 static = instance['static']
+                static_errors = instance['static_errors']
             else:
                 static = None
+                static_errors = None
+            if has_timeseries:
+                values = instance['values']
+                value_errors = instance['value_errors']
+            else:
+                values = None
 
             time = instance['time']
-            timeseries = tf.concat(
-                [instance[mod_type] for mod_type in collect_ts], axis=-1)
 
             if self.add_measurements_and_lengths:
-                measurements = tf.math.is_finite(timeseries)
+                measurements = tf.math.is_finite(values)
                 length = tf.shape(time)[0]
                 return {
                     'combined': (
                         static,
+                        static_errors,
                         time,
-                        timeseries,
+                        values,
+                        value_errors,
                         measurements,
                         length
                     ),
@@ -123,7 +138,13 @@ class AstroTsDatasetBuilder(tfds.core.GeneratorBasedBuilder):
                 }
             else:
                 return {
-                    'combined': (static, time, timeseries),
+                    'combined': (
+                        static,
+                        static_errors,
+                        time,
+                        values,
+                        value_errors
+                    ),
                     'target': instance['targets'][self.default_target]
                 }
 

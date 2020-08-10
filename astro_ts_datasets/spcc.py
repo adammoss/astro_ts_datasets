@@ -39,13 +39,10 @@ class SPCCDataReader(Sequence):
     """Reader class for SPCC dataset."""
 
     static_features = [
-        'host_photoz', 'host_photoz_error', 'mwebv'
+        'host_photoz', 'mwebv'
     ]
     ts_features = [
-        'desg_flux', 'desg_flux_error',
-        'desr_flux', 'desr_flux_error',
-        'desi_flux', 'desi_flux_error',
-        'desz_flux', 'desz_flux_error',
+        'desg_flux', 'desr_flux', 'desi_flux', 'desz_flux',
     ]
 
     # Remove instances without any timeseries
@@ -74,9 +71,17 @@ class SPCCDataReader(Sequence):
             metadata_file: File containing the metadata definitions
 
         """
+        self.static_error_features = [feature + '_error' for feature in self.static_features]
+        self.ts_error_features = [feature + '_error' for feature in self.ts_features]
         metadata = pd.read_csv(metadata_file, header=0, sep=',')
         self.metadata = metadata[~metadata['object_id'].isin(self.blacklist)]
+        for feature in self.static_error_features:
+            if feature not in self.metadata:
+                self.metadata[feature] = np.nan
         self.data = pd.concat([pd.read_csv(data_file, header=0, sep=',') for data_file in data_files])
+        for feature in self.ts_error_features:
+            if feature not in self.data:
+                self.data[feature] = np.nan
 
     def _quantise_time(self, values):
         return self.time_quantisation * np.round(values / self.time_quantisation)
@@ -85,22 +90,27 @@ class SPCCDataReader(Sequence):
         """Get instance at position index of metadata file."""
         instance = self.metadata.iloc[index]
         static = instance[self.static_features]
+        static_errors = instance[self.static_error_features]
         object_id = instance['object_id']
         # Read data
         timeseries = self._read_timeseries(object_id)
         time = timeseries['time']
         values = timeseries[self.ts_features]
+        value_errors = timeseries[self.ts_error_features]
 
         return object_id, {
             'static': static,
+            'static_errors' : static_errors,
             'time': time,
             'values': values,
+            'value_errors': value_errors,
             'targets': {
                 'class':
                     self.class_keys[instance['class']]
             },
             'metadata': {
-                'object_id': object_id
+                'object_id': object_id,
+                'redshift': instance['redshift']
             }
         }
 
@@ -108,7 +118,7 @@ class SPCCDataReader(Sequence):
         data = self.data[self.data['object_id'] == object_id].copy()
         data['time'] = self._quantise_time(data['time'])
         timeseries = data.pivot_table(index='time', columns='parameter', values='value')
-        timeseries = timeseries.reindex(columns=self.ts_features).reset_index()
+        timeseries = timeseries.reindex(columns=self.ts_features + self.ts_error_features).reset_index()
         return timeseries
 
     def __len__(self):
