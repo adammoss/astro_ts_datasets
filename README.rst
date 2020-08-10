@@ -33,15 +33,13 @@ Instance structure
 Each instance in the dataset is represented as a nested directory of the following
 structure:
 
-- ``static``: Static variables such as demographics or the unit the patient was
-  admitted to
+- ``static``: Static variables such as photo z
 - ``time``: Scalar time variable containing the time since admission in hours
-- ``timeseries``: Observation values of time series, these by default contain `NaN` for
+- ``values``: Observation values of time series, these by default contain `NaN` for
   modalities which were not observed for the given timepoint.
 - ``targets``: Directory of potential target values, the available endpoints are
   dataset specific.
-- ``metadata``: Directory of metadata on an individual patient, such as the
-  identifier using in the dataset.
+- ``metadata``: Directory of metadata on an individual object
 
 Supervised dataset
 ------------------

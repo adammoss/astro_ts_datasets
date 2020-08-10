@@ -49,15 +49,15 @@ class AstroTsDatasetInfo(tfds.core.DatasetInfo):
                 shape=(len(static_names),),
                 dtype=self.static_dtype)
         if self.has_timeseries:
-            metadata['timeseries_names'] = timeseries_names
+            metadata['values_names'] = timeseries_names
             timeseries_is_categorical.extend(
                 ['=' in name for name in timeseries_names])
-            features_dict['timeseries'] = Tensor(
+            features_dict['values'] = Tensor(
                 shape=(None, len(timeseries_names),),
                 dtype=self.timeseries_dtype)
 
         metadata['static_categorical_indicator'] = static_is_categorical
-        metadata['timeseries_categorical_indicator'] = timeseries_is_categorical
+        metadata['values_categorical_indicator'] = timeseries_is_categorical
 
         features_dict['targets'] = targets
         features_dict['metadata'] = {'object_id': self.object_id_dtype}
@@ -96,7 +96,7 @@ class AstroTsDatasetBuilder(tfds.core.GeneratorBasedBuilder):
         has_static = self.info.has_static
         collect_ts = []
         if self.has_timeseries:
-            collect_ts.append('timeseries')
+            collect_ts.append('values')
 
         def preprocess_output(instance):
             if has_static:
@@ -105,17 +105,17 @@ class AstroTsDatasetBuilder(tfds.core.GeneratorBasedBuilder):
                 static = None
 
             time = instance['time']
-            time_series = tf.concat(
+            timeseries = tf.concat(
                 [instance[mod_type] for mod_type in collect_ts], axis=-1)
 
             if self.add_measurements_and_lengths:
-                measurements = tf.math.is_finite(time_series)
+                measurements = tf.math.is_finite(timeseries)
                 length = tf.shape(time)[0]
                 return {
                     'combined': (
                         static,
                         time,
-                        time_series,
+                        timeseries,
                         measurements,
                         length
                     ),
@@ -123,7 +123,7 @@ class AstroTsDatasetBuilder(tfds.core.GeneratorBasedBuilder):
                 }
             else:
                 return {
-                    'combined': (static, time, time_series),
+                    'combined': (static, time, timeseries),
                     'target': instance['targets'][self.default_target]
                 }
 

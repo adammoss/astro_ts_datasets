@@ -94,7 +94,7 @@ class SPCCDataReader(Sequence):
         return object_id, {
             'static': static,
             'time': time,
-            'timeseries': values,
+            'values': values,
             'targets': {
                 'class':
                     self.class_keys[instance['class']]
