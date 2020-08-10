@@ -134,7 +134,8 @@ class AstroTsDatasetBuilder(tfds.core.GeneratorBasedBuilder):
                         measurements,
                         length
                     ),
-                    'target': instance['targets'][self.default_target]
+                    'target': instance['targets'][self.default_target],
+                    'metadata': instance['metadata']
                 }
             else:
                 return {
@@ -145,7 +146,8 @@ class AstroTsDatasetBuilder(tfds.core.GeneratorBasedBuilder):
                         values,
                         value_errors
                     ),
-                    'target': instance['targets'][self.default_target]
+                    'target': instance['targets'][self.default_target],
+                    'metadata': instance['metadata']
                 }
 
         return dataset.map(
