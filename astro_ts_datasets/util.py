@@ -65,6 +65,7 @@ class AstroTsDatasetInfo(tfds.core.DatasetInfo):
 
         metadata['static_categorical_indicator'] = static_is_categorical
         metadata['values_categorical_indicator'] = timeseries_is_categorical
+        metadata['has_errors'] = True
 
         features_dict['targets'] = targets
         features_dict['metadata'] = {
