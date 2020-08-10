@@ -8,7 +8,7 @@ following the tensorflow dataset API.
 Currently implemented datasets are:
 
 - ``spcc`` (Supernova Photometric Classification Challenge)
-- ``plasticc`` (PHOTOMETRIC LSST ASTRONOMICAL TIME-SERIES CLASSIFICATION CHALLENGE)
+- ``plasticc`` (Photometric Lsst Astronomical Time-series Classification Challenge)
 
 This is based on the medical datasets repository https://github.com/ExpectationMax/medical_ts_datasets
 
@@ -22,7 +22,7 @@ like any other tensorflow dataset.
 .. code-block:: python
 
     import tensorflow_datasets as tfds
-    import medical_ts_datasets
+    import astro_ts_datasets
 
     spcc_dataset = tfds.load(name='spcc', split='train')
 
@@ -33,8 +33,8 @@ Instance structure
 Each instance in the dataset is represented as a nested directory of the following
 structure:
 
-- ``static``: Static variables such as photo z
-- ``time``: Scalar time variable containing the time since admission in hours
+- ``static``: Static variables such as photometric redshift
+- ``time``: Scalar time variable containing the observation time
 - ``values``: Observation values of time series, these by default contain `NaN` for
   modalities which were not observed for the given timepoint.
 - ``targets``: Directory of potential target values, the available endpoints are
