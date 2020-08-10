@@ -92,10 +92,8 @@ class AstroTsDatasetInfo(tfds.core.DatasetInfo):
 class AstroTsDatasetBuilder(tfds.core.GeneratorBasedBuilder):
     """Builder class for astro time series datasets."""
 
-    def __init__(self, output_raw=False, add_measurements_and_lengths=True,
-                 **kwargs):
+    def __init__(self, output_raw=False, **kwargs):
         self.output_raw = output_raw
-        self.add_measurements_and_lengths = add_measurements_and_lengths
         super().__init__(**kwargs)
 
     def _as_dataset(self, **kwargs):
@@ -122,34 +120,20 @@ class AstroTsDatasetBuilder(tfds.core.GeneratorBasedBuilder):
 
             time = instance['time']
 
-            if self.add_measurements_and_lengths:
-                measurements = tf.math.is_finite(values)
-                length = tf.shape(time)[0]
-                return {
-                    'combined': (
-                        static,
-                        static_errors,
-                        time,
-                        values,
-                        value_errors,
-                        measurements,
-                        length
-                    ),
-                    'target': instance['targets'][self.default_target],
-                    'metadata': instance['metadata']
-                }
-            else:
-                return {
-                    'combined': (
-                        static,
-                        static_errors,
-                        time,
-                        values,
-                        value_errors
-                    ),
-                    'target': instance['targets'][self.default_target],
-                    'metadata': instance['metadata']
-                }
+            measurements = tf.math.is_finite(values)
+            length = tf.shape(time)[0]
+            return {
+                'combined': (
+                    static,
+                    time,
+                    values,
+                    measurements,
+                    length,
+                    static_errors,
+                    value_errors,
+                ),
+                'target': instance['targets'][self.default_target]
+            }
 
         return dataset.map(
             preprocess_output,
