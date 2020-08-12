@@ -78,7 +78,7 @@ class AstroTsDatasetInfo(tfds.core.DatasetInfo):
         if builder.output_raw:
             supervised_keys = None
         else:
-            supervised_keys = ("combined", "target")
+            supervised_keys = ('combined', 'target')
 
         super().__init__(
             builder=builder,
@@ -132,7 +132,8 @@ class AstroTsDatasetBuilder(tfds.core.GeneratorBasedBuilder):
                     static_errors,
                     value_errors,
                 ),
-                'target': instance['targets'][self.default_target]
+                'target': instance['targets'][self.default_target],
+                'metadata': instance['metadata']
             }
 
         return dataset.map(

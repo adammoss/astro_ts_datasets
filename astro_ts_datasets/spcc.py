@@ -6,11 +6,9 @@ from __future__ import print_function
 
 import os
 from collections.abc import Sequence
-import logging
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 import tensorflow_datasets as tfds
 
 from .util import AstroTsDatasetBuilder, AstroTsDatasetInfo
