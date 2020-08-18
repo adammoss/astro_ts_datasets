@@ -14,34 +14,24 @@ import tensorflow_datasets as tfds
 from .util import AstroTsDatasetBuilder, AstroTsDatasetInfo
 
 RESOURCES = os.path.join(
-    os.path.dirname(__file__), 'resources', 'spcc')
+    os.path.dirname(__file__), 'resources', 'plasticc')
 
 _CITATION = """
-@article{kessler2010results,
-  title={Results from the supernova photometric classification challenge},
-  author={Kessler, Richard and Bassett, Bruce and Belov, Pavel and Bhatnagar, Vasudha and Campbell, Heather and Conley, Alex and Frieman, Joshua A and Glazov, Alexandre and Gonz{\'a}lez-Gait{\'a}n, Santiago and Hlozek, Ren{\'e}e and others},
-  journal={Publications of the Astronomical Society of the Pacific},
-  volume={122},
-  number={898},
-  pages={1415},
-  year={2010},
-  publisher={IOP Publishing}
-}
 """
 
 _DESCRIPTION = """
 """
 
 
-class SPCCDataReader(Sequence):
-    """Reader class for SPCC dataset."""
+class PlasticcDataReader(Sequence):
+    """Reader class for Plasticc dataset."""
 
     static_features = [
-        'host_photoz', 'mwebv'
+        'hostgal_photoz', 'mwebv'
     ]
 
     ts_features = [
-        'desg_flux', 'desr_flux', 'desi_flux', 'desz_flux',
+        'lsstu_flux', 'lsstg_flux', 'lsstr_flux', 'lssti_flux', 'lsstz_flux', 'lssty_flux'
     ]
 
     # Remove instances without any timeseries
@@ -49,35 +39,50 @@ class SPCCDataReader(Sequence):
     ]
 
     class_keys = {
-        1: 0,
-        2: 1,
-        21: 2,
-        22: 3,
-        23: 4,
-        3: 5,
-        32: 6,
-        33: 7
+        6: 0,
+        15: 1,
+        16: 2,
+        42: 3,
+        52: 4,
+        53: 5,
+        62: 6,
+        64: 7,
+        65: 8,
+        67: 9,
+        88: 10,
+        90: 11,
+        92: 12,
+        95: 13,
+        99: 14,
     }
 
     # Time quantisation in days
     time_quantisation = 1.0
 
     def __init__(self, data_files, metadata_file):
-        """Load instances from the SPCC challenge.
+        """Load instances from the Plasticc challenge.
 
         Args:
             data_path: Path containing the records.
             metadata_file: File containing the metadata definitions
 
         """
+
         self.static_error_features = [feature + '_error' for feature in self.static_features]
         self.ts_error_features = [feature + '_error' for feature in self.ts_features]
         metadata = pd.read_csv(metadata_file, header=0, sep=',')
         self.metadata = metadata[~metadata['object_id'].isin(self.blacklist)]
+        self.metadata = self.metadata.rename(columns={'hostgal_photoz_err': 'hostgal_photoz_error'}, )
         for feature in self.static_error_features:
             if feature not in self.metadata:
                 self.metadata[feature] = np.nan
         self.data = pd.concat([pd.read_csv(data_file, header=0, sep=',') for data_file in data_files])
+        self.data = self.data.rename(columns = {'mjd': 'time', 'flux_err': 'flux_error',})
+        self.data = self.data.replace({'passband': {0: 'lsstu', 1: 'lsstg', 2: 'lsstr', 3: 'lssti', 4: 'lsstz', 5: 'lssty', }})
+        self.data = pd.melt(self.data, id_vars=['object_id', 'time', 'passband'], value_vars=['flux', 'flux_error'],
+                            var_name='parameter', value_name='value')
+        self.data['parameter'] = self.data['passband'] + '_' + self.data['parameter'] #  self.data[['passband', 'parameter']].agg('_'.join, axis=1)
+        self.data.drop('passband', inplace=True, axis=1)
 
     def _quantise_time(self, values):
         return self.time_quantisation * np.round(values / self.time_quantisation)
@@ -102,11 +107,11 @@ class SPCCDataReader(Sequence):
             'value_errors': value_errors,
             'targets': {
                 'class':
-                    self.class_keys[instance['class']]
+                    self.class_keys[instance['target']]
             },
             'metadata': {
                 'object_id': object_id,
-                'redshift': instance['redshift']
+                'redshift': instance['true_z']
             }
         }
 
@@ -122,8 +127,8 @@ class SPCCDataReader(Sequence):
         return len(self.metadata)
 
 
-class SPCC(AstroTsDatasetBuilder):
-    """Dataset of the SPCC."""
+class Plasticc(AstroTsDatasetBuilder):
+    """Dataset of Plasticc"""
 
     VERSION = tfds.core.Version('1.0.10')
     has_metadata = True
@@ -135,23 +140,23 @@ class SPCC(AstroTsDatasetBuilder):
             builder=self,
             targets={
                 'class':
-                    tfds.features.ClassLabel(num_classes=8),
+                    tfds.features.ClassLabel(num_classes=15),
             },
             default_target='class',
-            static_names=SPCCDataReader.static_features,
-            timeseries_names=SPCCDataReader.ts_features,
+            static_names=PlasticcDataReader.static_features,
+            timeseries_names=PlasticcDataReader.ts_features,
             description=_DESCRIPTION,
-            homepage='',
+            homepage='https://zenodo.org/record/2539456#.XzsWWxNKibs',
             citation=_CITATION
         )
 
     def _split_generators(self, dl_manager: tfds.download.DownloadManager):
         """Return SplitGenerators."""
         paths = dl_manager.download({
-            'train_ts': 'https://storage.googleapis.com/spcc/simgen_training_set.csv.gz',  # noqa: E501
-            'train_meta': 'https://storage.googleapis.com/spcc/simgen_training_set_metadata.csv.gz',  # noqa: E501
-            'test_ts': 'https://storage.googleapis.com/spcc/simgen_test_set.csv.gz',  # noqa: E501
-            'test_meta': 'https://storage.googleapis.com/spcc/simgen_test_set_metadata.csv.gz',  # noqa: E501
+            'train_ts': 'https://zenodo.org/record/2539456/files/plasticc_train_lightcurves.csv.gz',  # noqa: E501
+            'train_meta': 'https://zenodo.org/record/2539456/files/plasticc_train_metadata.csv.gz',  # noqa: E501
+            'test_ts_1': 'https://zenodo.org/record/2539456/files/plasticc_test_lightcurves_01.csv.gz',  # noqa: E501
+            'test_meta': 'https://zenodo.org/record/2539456/files/plasticc_test_metadata.csv.gz',  # noqa: E501
         })
 
         return [
@@ -165,7 +170,7 @@ class SPCC(AstroTsDatasetBuilder):
             tfds.core.SplitGenerator(
                 name=tfds.Split.TEST,
                 gen_kwargs={
-                    'data_files': [paths['test_ts']],
+                    'data_files': [paths['test_ts_1']],
                     'metadata_file': paths['test_meta']
                 }
             )
@@ -173,6 +178,6 @@ class SPCC(AstroTsDatasetBuilder):
 
     def _generate_examples(self, data_files, metadata_file):
         """Yield examples."""
-        reader = SPCCDataReader(data_files, metadata_file)
+        reader = PlasticcDataReader(data_files, metadata_file)
         for instance in reader:
             yield instance
