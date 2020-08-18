@@ -1,4 +1,4 @@
-"""Module containing the Supernova Photometric Classification Challenge 2010."""
+"""Module containing the Photometric LSST Astronomical Time Series Classification Challenge 2018."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -17,6 +17,20 @@ RESOURCES = os.path.join(
     os.path.dirname(__file__), 'resources', 'plasticc')
 
 _CITATION = """
+@article{Kessler:2019qge,
+    author = "Kessler, R. and others",
+    collaboration = "LSST Dark Energy Science, Transient, Variable Stars Science",
+    title = "{Models and Simulations for the Photometric LSST Astronomical Time Series Classification Challenge (PLAsTiCC)}",
+    eprint = "1903.11756",
+    archivePrefix = "arXiv",
+    primaryClass = "astro-ph.HE",
+    doi = "10.1088/1538-3873/ab26f1",
+    journal = "Publ. Astron. Soc. Pac.",
+    volume = "131",
+    number = "1003",
+    pages = "094501",
+    year = "2019"
+}
 """
 
 _DESCRIPTION = """
@@ -27,14 +41,14 @@ class PlasticcDataReader(Sequence):
     """Reader class for Plasticc dataset."""
 
     static_features = [
-        'hostgal_photoz', 'mwebv'
+        'hostgal_photoz', 'mwebv', 'galactic'
     ]
 
     ts_features = [
         'lsstu_flux', 'lsstg_flux', 'lsstr_flux', 'lssti_flux', 'lsstz_flux', 'lssty_flux'
     ]
 
-    # Remove instances without any timeseries
+    # Remove any specific instances
     blacklist = [
     ]
 
@@ -59,7 +73,7 @@ class PlasticcDataReader(Sequence):
     # Time quantisation in days
     time_quantisation = 1.0
 
-    def __init__(self, data_files, metadata_file):
+    def __init__(self, data_files, metadata_file, remove_no_timeseries=True):
         """Load instances from the Plasticc challenge.
 
         Args:
@@ -70,19 +84,25 @@ class PlasticcDataReader(Sequence):
 
         self.static_error_features = [feature + '_error' for feature in self.static_features]
         self.ts_error_features = [feature + '_error' for feature in self.ts_features]
+        self.data = pd.concat([pd.read_csv(data_file, header=0, sep=',') for data_file in data_files])
+        self.data = self.data.rename(columns={'mjd': 'time', 'flux_err': 'flux_error', })
+        self.data = self.data.replace(
+            {'passband': {0: 'lsstu', 1: 'lsstg', 2: 'lsstr', 3: 'lssti', 4: 'lsstz', 5: 'lssty', }})
+        self.data = pd.melt(self.data, id_vars=['object_id', 'time', 'passband'], value_vars=['flux', 'flux_error'],
+                            var_name='parameter', value_name='value')
+        self.data['parameter'] = self.data['passband'] + '_' + self.data['parameter']
+        self.data.drop('passband', inplace=True, axis=1)
         metadata = pd.read_csv(metadata_file, header=0, sep=',')
         self.metadata = metadata[~metadata['object_id'].isin(self.blacklist)]
+        if remove_no_timeseries:
+            # Remove an objects we do not have lightcurves for
+            self.metadata = metadata[metadata['object_id'].isin(self.data.object_id.unique())]
         self.metadata = self.metadata.rename(columns={'hostgal_photoz_err': 'hostgal_photoz_error'}, )
+        self.metadata['galactic'] = (self.metadata['hostgal_photoz'] > 0).astype(float)
         for feature in self.static_error_features:
             if feature not in self.metadata:
                 self.metadata[feature] = np.nan
-        self.data = pd.concat([pd.read_csv(data_file, header=0, sep=',') for data_file in data_files])
-        self.data = self.data.rename(columns = {'mjd': 'time', 'flux_err': 'flux_error',})
-        self.data = self.data.replace({'passband': {0: 'lsstu', 1: 'lsstg', 2: 'lsstr', 3: 'lssti', 4: 'lsstz', 5: 'lssty', }})
-        self.data = pd.melt(self.data, id_vars=['object_id', 'time', 'passband'], value_vars=['flux', 'flux_error'],
-                            var_name='parameter', value_name='value')
-        self.data['parameter'] = self.data['passband'] + '_' + self.data['parameter'] #  self.data[['passband', 'parameter']].agg('_'.join, axis=1)
-        self.data.drop('passband', inplace=True, axis=1)
+
 
     def _quantise_time(self, values):
         return self.time_quantisation * np.round(values / self.time_quantisation)
@@ -99,6 +119,11 @@ class PlasticcDataReader(Sequence):
         values = timeseries[self.ts_features]
         value_errors = timeseries[self.ts_error_features]
 
+        if instance['true_target'] in self.class_keys:
+            true_target = self.class_keys[instance['true_target']]
+        else:
+            true_target = self.class_keys[99]
+
         return object_id, {
             'static': static,
             'static_errors' : static_errors,
@@ -107,7 +132,7 @@ class PlasticcDataReader(Sequence):
             'value_errors': value_errors,
             'targets': {
                 'class':
-                    self.class_keys[instance['target']]
+                    true_target
             },
             'metadata': {
                 'object_id': object_id,

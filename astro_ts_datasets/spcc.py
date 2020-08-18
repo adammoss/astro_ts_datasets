@@ -44,7 +44,7 @@ class SPCCDataReader(Sequence):
         'desg_flux', 'desr_flux', 'desi_flux', 'desz_flux',
     ]
 
-    # Remove instances without any timeseries
+    # Remove any specific instances
     blacklist = [
     ]
 
@@ -62,7 +62,7 @@ class SPCCDataReader(Sequence):
     # Time quantisation in days
     time_quantisation = 1.0
 
-    def __init__(self, data_files, metadata_file):
+    def __init__(self, data_files, metadata_file, remove_no_timeseries=True):
         """Load instances from the SPCC challenge.
 
         Args:
@@ -72,12 +72,16 @@ class SPCCDataReader(Sequence):
         """
         self.static_error_features = [feature + '_error' for feature in self.static_features]
         self.ts_error_features = [feature + '_error' for feature in self.ts_features]
+        self.data = pd.concat([pd.read_csv(data_file, header=0, sep=',') for data_file in data_files])
         metadata = pd.read_csv(metadata_file, header=0, sep=',')
         self.metadata = metadata[~metadata['object_id'].isin(self.blacklist)]
+        if remove_no_timeseries:
+            # Remove an objects we do not have lightcurves for
+            self.metadata = metadata[metadata['object_id'].isin(self.data.object_id.unique())]
         for feature in self.static_error_features:
             if feature not in self.metadata:
                 self.metadata[feature] = np.nan
-        self.data = pd.concat([pd.read_csv(data_file, header=0, sep=',') for data_file in data_files])
+
 
     def _quantise_time(self, values):
         return self.time_quantisation * np.round(values / self.time_quantisation)

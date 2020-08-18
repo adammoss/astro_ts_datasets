@@ -8,7 +8,7 @@ following the tensorflow dataset API.
 Currently implemented datasets are:
 
 - ``spcc`` (Supernova Photometric Classification Challenge)
-- ``plasticc`` (Photometric Lsst Astronomical Time-series Classification Challenge)
+- ``plasticc`` (Photometric LSST Astronomical Time-series Classification Challenge)
 
 This is based on the medical datasets repository https://github.com/ExpectationMax/medical_ts_datasets
 
@@ -38,7 +38,7 @@ structure:
 - ``time``: Scalar time variable containing the observation time
 - ``values``: Observation values of time series, these by default contain `NaN` for
   modalities which were not observed for the given timepoint.
-- ``values_errors``: Observation values of time series errors, these by default contain `NaN` for
+- ``value_errors``: Observation values of time series errors, these by default contain `NaN` for
   modalities which were not observed for the given timepoint.
 - ``targets``: Directory of potential target values, the available endpoints are
   dataset specific.
