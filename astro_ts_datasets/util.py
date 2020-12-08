@@ -94,6 +94,10 @@ class AstroTsDatasetBuilder(tfds.core.GeneratorBasedBuilder):
 
     def __init__(self, output_raw=False, **kwargs):
         self.output_raw = output_raw
+        # Hack to allow default target to be changed when loading dataset
+        if 'default_target' in kwargs:
+            self.default_target = kwargs['default_target']
+            kwargs.pop('default_target')
         super().__init__(**kwargs)
 
     def _as_dataset(self, **kwargs):

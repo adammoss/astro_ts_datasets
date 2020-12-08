@@ -105,8 +105,8 @@ class SPCCDataReader(Sequence):
             'values': values,
             'value_errors': value_errors,
             'targets': {
-                'class':
-                    self.class_keys[instance['class']]
+                'class': self.class_keys[instance['class']],
+                'sn1a': self.class_keys[instance['class']] == 0
             },
             'metadata': {
                 'object_id': object_id,
@@ -138,10 +138,10 @@ class SPCC(AstroTsDatasetBuilder):
         return AstroTsDatasetInfo(
             builder=self,
             targets={
-                'class':
-                    tfds.features.ClassLabel(num_classes=8),
+                'class': tfds.features.ClassLabel(num_classes=8),
+                'sn1a': tfds.features.ClassLabel(num_classes=2),
             },
-            default_target='class',
+            default_target=self.default_target,
             static_names=SPCCDataReader.static_features,
             timeseries_names=SPCCDataReader.ts_features,
             description=_DESCRIPTION,

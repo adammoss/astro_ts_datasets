@@ -131,8 +131,8 @@ class PlasticcDataReader(Sequence):
             'values': values,
             'value_errors': value_errors,
             'targets': {
-                'class':
-                    true_target
+                'class': true_target,
+                'sn1a': true_target == 11
             },
             'metadata': {
                 'object_id': object_id,
@@ -164,8 +164,8 @@ class Plasticc(AstroTsDatasetBuilder):
         return AstroTsDatasetInfo(
             builder=self,
             targets={
-                'class':
-                    tfds.features.ClassLabel(num_classes=15),
+                'class': tfds.features.ClassLabel(num_classes=15),
+                'sn1a': tfds.features.ClassLabel(num_classes=2),
             },
             default_target='class',
             static_names=PlasticcDataReader.static_features,
