@@ -1,11 +1,11 @@
-"""Utility functions and classes used by medical ts datasets."""
+"""Utility functions and classes used by astro ts datasets."""
 import tensorflow as tf
 import tensorflow_datasets as tfds
 from tensorflow_datasets.core.features import FeaturesDict, Tensor
 
 
 class AstroTsDatasetInfo(tfds.core.DatasetInfo):
-    """DatasetINfo for astro time series datasets."""
+    """Dataset info for astro time series datasets."""
 
     time_dtype = tf.float32
     static_dtype = tf.float32
@@ -17,7 +17,7 @@ class AstroTsDatasetInfo(tfds.core.DatasetInfo):
     def __init__(self, builder, targets, default_target,
                  static_names=None, timeseries_names=None,
                  description=None, homepage=None, citation=None):
-        """Dataset info for medical time series datasets.
+        """Dataset info for astro time series datasets.
 
         Ensures all datasets follow a similar structure and can be used
         (almost) interchangably.
